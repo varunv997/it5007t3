@@ -1,0 +1,29 @@
+{
+  "name": "a0241600y-tutorial-3",
+  "version": "1.0.0",
+  "description": "Submission for tutorial 3",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon -w server server/server.js",
+    "compile": "babel src --out-dir public",
+    "watch": "babel src --out-dir public --watch --verbose",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/varunv997/it5007t3.git"
+  },
+  "author": "varun_vn@u.nus.edu",
+  "license": "ISC",
+  "homepage": "https://github.com/varunv997/it5007t3.git",
+  "dependencies": {
+    "express": "^4.16.4",
+    "nodemon": "^1.18.9"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.2.3",
+    "@babel/preset-react": "^7.0.0"
+  }
+}
