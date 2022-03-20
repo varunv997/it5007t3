@@ -1,0 +1,25 @@
+scalar GraphQLDate
+
+type Reservation {
+    id: String!
+    name: String!
+    phone: String!
+    created: GraphQLDate!
+}
+
+input ReservationInput {
+    id: String!
+    name: String!
+    phone: String!
+    created: GraphQLDate!
+}
+
+# Top level Query
+type Query {
+    reservationList: [Reservation!]! 
+}
+
+type Mutation {
+    createReservation(reservation: ReservationInput!): Reservation!,
+    deleteReservation(id: String!): Reservation!
+}

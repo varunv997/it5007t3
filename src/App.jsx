@@ -1,4 +1,9 @@
-const initialReservations = [];
+const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\d');
+
+function jsonDateReviver(key, value) {
+  if (dateRegex.test(value)) return new Date(value);
+  return value;
+}
 
 class ReservationRow extends React.Component {
   constructor() {
@@ -7,9 +12,10 @@ class ReservationRow extends React.Component {
 
   render() {
     const reservation = this.props.reservation;
+    const idx = this.props.idx
     return (
       <tr>
-        <td>{reservation.id}</td>
+        <td>{idx}</td>
         <td>{reservation.name}</td>
         <td>{reservation.phone}</td>
         <td>{reservation
@@ -23,10 +29,11 @@ class ReservationRow extends React.Component {
 
 class ReservationTable extends React.Component {
   render() {
+    let idx = 1;
     const reservationRows = this
       .props
       .reservations
-      .map(reservation => <ReservationRow key={reservation.id} reservation={reservation} handleDelete={this.props.handleDelete}/>);
+      .map(reservation => <ReservationRow key={reservation.id} reservation={reservation} idx={idx++} handleDelete={this.props.handleDelete}/>);
 
     return (
       <table className="bordered-table">
@@ -61,7 +68,6 @@ class ReservationAdd extends React.Component {
     const reservation = {
       name: form.name.value,
       phone: form.phone.value,
-      status: 'New'
     }
 
     const namere = /^([a-zA-Z ]){2,30}$/
@@ -204,6 +210,31 @@ class ReservationsApp extends React.Component {
     this.handleDelete = this.handleDelete.bind(this);
   }
 
+  componentDidMount() {
+    this.loadData();
+  }
+
+  async loadData() {
+    const query = `query {
+      reservationList {
+        id
+        name
+        phone
+        created
+      }
+    }`;
+
+    const response = await fetch('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify( {query} )
+    });
+
+    const body = await response.text();
+    const result = JSON.parse(body, jsonDateReviver);
+    this.setState( {reservations: result.data.reservationList} )
+  }
+
   activateComponent(component) {
     switch(component) {
       case "showCreateReservation":
@@ -223,36 +254,59 @@ class ReservationsApp extends React.Component {
     }
   }
 
-  createReservation(reservation) {
-    reservation.id = this.state.reservations.length + 1;
+  async createReservation(reservation) {
+    reservation.id = Date.now().toString();
     reservation.created = new Date();
     const newReservationList = this
       .state
       .reservations
       .slice();
     if (newReservationList.length <=24) {
-      newReservationList.push(reservation);
-      this.setState({reservations: newReservationList});
+      const query = `mutation {
+        createReservation( reservation: {
+          id: "${reservation.id}",
+          name: "${reservation.name}",
+          phone: "${reservation.phone}",
+          created: "${reservation.created}"
+        }) {
+          id,
+          name,
+          phone,
+          created,
+        }
+      }`;
+
+      const response = await fetch('/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ query, variables: { reservation } })
+      });
+
+      this.loadData()
     }
     else {
       alert("Overflow");
     }
   }
 
-  handleDelete(id) {
-    const newReservationList = this
-      .state
-      .reservations
-      .slice()
-    
-    newReservationList.splice(id-1, 1);
-    // handle indices
-    let nid = 1
-    for (let reservation of newReservationList) {
-      reservation.id = nid;
-      nid += 1;
-    }
-    this.setState({reservations: newReservationList});
+  async handleDelete(id) {
+    const query = `mutation {
+      deleteReservation (id: "${id.toString()}") {
+        id,
+        name,
+        phone,
+        created
+      }
+    }`;
+
+    const response = await fetch('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json'},
+      body: JSON.stringify({ query, variables: { id } })
+    });
+
+    this.loadData()
+
   }
 
   render() {
