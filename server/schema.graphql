@@ -7,7 +7,21 @@ type Reservation {
     created: GraphQLDate!
 }
 
+type Customer {
+    id: String!
+    name: String!
+    phone: String!
+    created: GraphQLDate!
+}
+
 input ReservationInput {
+    id: String!
+    name: String!
+    phone: String!
+    created: GraphQLDate!
+}
+
+input CustomerInput {
     id: String!
     name: String!
     phone: String!
@@ -16,10 +30,12 @@ input ReservationInput {
 
 # Top level Query
 type Query {
-    reservationList: [Reservation!]! 
+    reservationList: [Reservation!]!,
+    blacklist: [Customer!]!
 }
 
 type Mutation {
     createReservation(reservation: ReservationInput!): Reservation!,
-    deleteReservation(id: String!): Reservation!
+    deleteReservation(id: String!): Reservation!,
+    createBlacklist(customer: CustomerInput!): Customer!
 }

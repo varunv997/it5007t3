@@ -27,6 +27,27 @@ class ReservationRow extends React.Component {
   }
 }
 
+class BlacklistRow extends React.Component {
+  constructor() {
+    super();
+  }
+
+  render() {
+    const blacklist = this.props.blacklist;
+    const idx = this.props.idx;
+    return (
+      <tr>
+        <td>{idx}</td>
+        <td>{blacklist.name}</td>
+        <td>{blacklist.phone}</td>
+        <td>{blacklist
+            .created
+            .toDateString()}</td>
+      </tr>
+    )
+  }
+}
+
 class ReservationTable extends React.Component {
   render() {
     let idx = 1;
@@ -48,6 +69,31 @@ class ReservationTable extends React.Component {
         </thead>
         <tbody>
           {reservationRows}
+        </tbody>
+      </table>
+    );
+  }
+}
+
+class BlacklistTable extends React.Component {
+  render() {
+    let idx = 1;
+    const blacklistRows = this.props.blacklist.map(
+      blacklistcustomer => <BlacklistRow key={blacklistcustomer.id} blacklist={blacklistcustomer} idx={idx++} />
+    );
+    
+    return (
+      <table className="bordered-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {blacklistRows}
         </tbody>
       </table>
     );
@@ -117,6 +163,58 @@ class ReservationList extends React.Component {
         <ReservationTable reservations={this.props.reservations} handleDelete={this.props.handleDelete}/>
       </React.Fragment>
     );
+  }
+}
+
+class BlacklistList extends React.Component {
+  constructor() {
+    super();
+    this.handleSubmit = this
+      .handleSubmit
+      .bind(this);
+  }
+
+  handleSubmit(e) {
+    e.preventDefault();
+    const form = document.forms.blacklistAdd;
+    const blacklistCustomer = {
+      name: form.name.value,
+      phone: form.phone.value,
+    }
+
+    const namere = /^([a-zA-Z ]){2,30}$/
+    if (!namere.test(blacklistCustomer.name)) {
+      alert("Please enter a valid name (at least 2 characters long without numbers)");
+      return;
+    }
+
+    const phonere = /^\d{8}$/;    ;
+    if (!phonere.test(blacklistCustomer.phone)) {
+      alert("Please Enter a valid 8 digit phone number)");
+      return;
+    }
+
+    this
+      .props
+      .createBlacklist(blacklistCustomer);
+    form.name.value = "";
+    form.phone.value = "";
+  }
+
+  render() {
+    return (
+      <React.Fragment>
+        <h1>Blacklisted Customers</h1>
+        <hr/>
+        <BlacklistTable blacklist={this.props.blacklist} />
+        <hr/>
+        <form name="blacklistAdd" onSubmit={this.handleSubmit}>
+          <input type="text" name="name" placeholder="Name"/>
+          <input type="text" name="phone" placeholder="Phone"/>
+          <button>Add</button>
+        </form>
+      </React.Fragment>
+    )
   }
 }
 
@@ -203,10 +301,13 @@ class ReservationsApp extends React.Component {
       showReservationList:false,
       showHome: true,
       showDeleteReservation:false,
-      reservations: []
+      showBlackListedCustomers:false,
+      reservations: [],
+      blacklist: []
     };
     this.activateComponent = this.activateComponent.bind(this);
     this.createReservation = this.createReservation.bind(this);
+    this.createBlacklist = this.createBlacklist.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
   }
 
@@ -214,7 +315,7 @@ class ReservationsApp extends React.Component {
     this.loadData();
   }
 
-  async loadData() {
+  async loadReservationData() {
     const query = `query {
       reservationList {
         id
@@ -232,23 +333,52 @@ class ReservationsApp extends React.Component {
 
     const body = await response.text();
     const result = JSON.parse(body, jsonDateReviver);
-    this.setState( {reservations: result.data.reservationList} )
+    console.log(result.data.reservationList)
+    return result.data.reservationList
+  }
+
+  async loadBlacklistData() {
+    const query = `query {
+      blacklist {
+        id
+        name
+        phone
+        created
+      }
+    }`;
+
+    const response = await fetch('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify( {query} )
+    });
+
+    const body = await response.text();
+    const result = JSON.parse(body, jsonDateReviver);
+    console.log(result.data.blacklist)
+    return result.data.blacklist
+  }
+
+  async loadData() {
+    this.setState( {reservations: await this.loadReservationData(), blacklist: await this.loadBlacklistData()} )
   }
 
   activateComponent(component) {
     switch(component) {
       case "showCreateReservation":
-        this.setState({ showCreateReservation: true, showReservationList: false, showDeleteReservation: false, showHome: false });
+        this.setState({ showCreateReservation: true, showReservationList: false, showDeleteReservation: false, showHome: false, showBlackListedCustomers: false });
         break;
       case "showReservationList":
-        this.setState({ showReservationList: true, showCreateReservation: false, showDeleteReservation: false, showHome: false });
+        this.setState({ showReservationList: true, showCreateReservation: false, showDeleteReservation: false, showHome: false, showBlackListedCustomers: false });
         break;
       case "showDeleteReservation":
-        this.setState({ showDeleteReservation: true, showCreateReservation: false, showHome: false, showReservationList: false });
+        this.setState({ showDeleteReservation: true, showCreateReservation: false, showHome: false, showReservationList: false, showBlackListedCustomers: false });
         break;
       case "showHome":
-        this.setState({ showHome: true, showCreateReservation: false, showDeleteReservation: false, showReservationList: false });
+        this.setState({ showHome: true, showCreateReservation: false, showDeleteReservation: false, showReservationList: false, showBlackListedCustomers: false });
         break;
+      case "showBlackListedCustomers":
+        this.setState({ showBlackListedCustomers: true, showHome: false, showCreateReservation: false, showDeleteReservation: false, showReservationList: false })
       default:
         null;
     }
@@ -289,6 +419,33 @@ class ReservationsApp extends React.Component {
     }
   }
 
+  async createBlacklist(customer) {
+    customer.id = Date.now().toString();
+    customer.created = new Date();
+
+    const query = `mutation {
+      createBlacklist( customer: {
+        id: "${customer.id}",
+        phone: "${customer.phone}",
+        name: "${customer.name}",
+        created: "${customer.created}"
+      }) {
+        id,
+        name,
+        phone,
+        created,
+      }
+    }`;
+
+    const response = await fetch('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json'},
+      body: JSON.stringify({ query, variables: { customer } })
+    });
+
+    this.loadData();
+  }
+
   async handleDelete(id) {
     const query = `mutation {
       deleteReservation (id: "${id.toString()}") {
@@ -317,11 +474,13 @@ class ReservationsApp extends React.Component {
           <button  onClick={() => this.activateComponent("showCreateReservation")}>Create Reservation</button>
           <button  onClick={() => this.activateComponent("showDeleteReservation")}>Delete Reservation</button>
           <button  onClick={() => this.activateComponent("showReservationList")}>View Reservations</button>
+          <button  onClick={() => this.activateComponent("showBlackListedCustomers")}>Blacklist Customer</button>
         </div>
         {this.state.showHome && <Home rows={5} cols={5} totalBookings={this.state.reservations.length} />}
         {this.state.showReservationList && <ReservationList reservations={this.state.reservations}/>}
         {this.state.showCreateReservation && <ReservationAdd createReservation={this.createReservation} />}
         {this.state.showDeleteReservation && <ReservationList reservations={this.state.reservations} handleDelete={this.handleDelete}/>}
+        {this.state.showBlackListedCustomers && <BlacklistList blacklist={this.state.blacklist} createBlacklist={this.createBlacklist}></BlacklistList>}
       </div>
     )
   }
